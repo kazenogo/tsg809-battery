@@ -144,7 +144,7 @@ namespace TSG809Battery
             }
             catch { }
         }
-// 极致锐化：采用纯色无抗锯齿、像素级点阵对齐，告别模糊
+// 极致契合浅色任务栏：模仿 HWiNFO 的纯黑锐利数字风格
         private Icon CreateTextIcon(int percentage, bool connected)
         {
             Bitmap bitmap = new Bitmap(16, 16);
@@ -152,7 +152,7 @@ namespace TSG809Battery
             {
                 g.Clear(Color.Transparent);
                 
-                // 关键：关闭所有平滑和抗锯齿，强制像素边缘锐利（类似 HWiNFO 的硬朗风格）
+                // 开启像素级精准对齐，关闭抗锯齿，使字体边缘绝对硬朗
                 g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
@@ -168,22 +168,11 @@ namespace TSG809Battery
                 {
                     string text = percentage >= 100 ? "99" : percentage.ToString();
                     
-                    // 采用高亮纯白或亮绿色，不加杂乱阴影，保证在任何任务栏上字迹锐利分明
-                    Brush textBrush = Brushes.White;
-                    if (percentage <= 20) textBrush = Brushes.Red;
-                    else if (percentage <= 50) textBrush = Brushes.Orange;
-
-                    // 使用最适合小尺寸的宋体/Arial，配合单像素对齐
-                    using (Font font = new Font("Arial", 7.5f, FontStyle.Bold))
+                    // 核心：直接使用纯黑色粗体，完美契合你的浅色任务栏，清晰度向 HWiNFO 看齐
+                    using (Font font = new Font("Arial", 8f, FontStyle.Bold))
                     {
-                        // 稍微错开 1 像素画一个极细的黑边框，确保浅色任务栏下也能看清
-                        g.DrawString(text, font, Brushes.Black, 0, 1);
-                        g.DrawString(text, font, Brushes.Black, 2, 1);
-                        g.DrawString(text, font, Brushes.Black, 1, 0);
-                        g.DrawString(text, font, Brushes.Black, 1, 2);
-
-                        // 中间填上核心高亮数字
-                        g.DrawString(text, font, textBrush, 1, 1);
+                        // 稍微往下/往右微调 1 像素，让数字在 16x16 区域内完美居中显示
+                        g.DrawString(text, font, Brushes.Black, 1, 1);
                     }
                 }
             }
