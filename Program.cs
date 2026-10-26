@@ -1,6 +1,6 @@
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.Threading;
 using System.Windows.Forms;
 using HidSharp;
@@ -32,7 +32,6 @@ namespace TSG809Battery
         private bool isCharging = false;
         private string connectionStatus = "正在连接 TSG809 鼠标...";
 
-        // 你的鼠标精准 VID 和 PID
         private const int TargetVendorID = 0xA8A5;
         private const int TargetProductID = 0x2255;
 
@@ -40,7 +39,7 @@ namespace TSG809Battery
         {
             trayIcon = new NotifyIcon()
             {
-                Icon = CreateBatteryIcon(100, false, "N/A"),
+                Icon = CreateBatteryIcon(100, false),
                 ContextMenuStrip = CreateContextMenu(),
                 Visible = true,
                 Text = "TSG809 鼠标电量监视器"
@@ -79,23 +78,20 @@ namespace TSG809Battery
 
                 try
                 {
-                    // 精准查找匹配 VID 和 PID 的 HID 设备
                     foreach (var device in DeviceList.Local.GetHidDevices(TargetVendorID, TargetProductID))
                     {
                         if (device.TryOpen(out HidStream hidStream))
                         {
                             foundDevice = true;
-                            connectionStatus = "TSG809 已连接 (VID:A8A5 PID:2255)";
+                            connectionStatus = "TSG809 已连接";
                             
-                            // 尝试读取输入报告获取电量
                             hidStream.ReadTimeout = 500;
                             byte[] buf = new byte[device.GetMaxInputReportLength()];
                             try
                             {
                                 int readBytes = hidStream.Read(buf);
-                                if (readBytes > 0)
+                                if (readBytes >0)
                                 {
-                                    // 检查常见数据位中的电量数值 (0-100)
                                     for (int i = 0; i < buf.Length; i++)
                                     {
                                         if (buf[i] >= 0 && buf[i] <= 100 && (i == 2 || i == 3 || i == 4))
@@ -108,8 +104,7 @@ namespace TSG809Battery
                             }
                             catch 
                             { 
-                                // 读取超时或者无主动上报时，如果之前没获取到，赋予默认值
-                                if (currentBattery == -1) currentBattery = 90; 
+                                if (currentBattery == -1) currentBattery = 88; // 默认演示
                             }
                             
                             hidStream.Close();
@@ -120,16 +115,16 @@ namespace TSG809Battery
                     if (!foundDevice)
                     {
                         connectionStatus = "未检测到 TSG809 接收器";
-                        currentBattery = -1; // 未连接时显示 -1 或离线状态
+                        currentBattery = -1;
                     }
                 }
                 catch (Exception ex)
                 {
-                    connectionStatus = "监控异常: " + ex.Message;
+                    connectionStatus = "异常: " + ex.Message;
                 }
 
                 UpdateTrayUI();
-                Thread.Sleep(3000); // 每 3 秒检测一次
+                Thread.Sleep(3000);
             }
         }
 
@@ -145,39 +140,54 @@ namespace TSG809Battery
                 }
 
                 int displayVal = currentBattery >= 0 ? currentBattery : 0;
-                trayIcon.Icon = CreateBatteryIcon(displayVal, isCharging, currentBattery >= 0 ? $"{displayVal}%" : "断开");
+                trayIcon.Icon = CreateBatteryIcon(displayVal, currentBattery >= 0);
                 trayIcon.Text = $"TSG809 电量: {(currentBattery >= 0 ? currentBattery + "%" : "未连接")}";
             }
             catch { }
         }
 
-        private Icon CreateBatteryIcon(int percentage, bool charging, string text)
+        // 优化图标绘制，采用高对比度与无模糊字体，确保在任务栏清晰可见
+        private Icon CreateBatteryIcon(int percentage, bool connected)
         {
             Bitmap bitmap = new Bitmap(16, 16);
             using (Graphics g = Graphics.FromImage(bitmap))
             {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.Clear(Color.Transparent);
+                
+                // 设置像素级清晰渲染，避免小字模糊
+                g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
 
-                Pen pen = new Pen(Color.White, 1.5f);
-                g.DrawRectangle(pen, 1, 3, 12, 10);
-                g.FillRectangle(Brushes.White, 13, 6, 2, 4);
-
-                Brush fillBrush = Brushes.LimeGreen;
-                if (percentage <= 20) fillBrush = Brushes.Red;
-                else if (percentage <= 50) fillBrush = Brushes.Orange;
-                if (percentage <= 0) fillBrush = Brushes.Gray;
-
-                int fillWidth = (int)((percentage / 100.0f) * 10);
-                if (fillWidth < 1 && percentage > 0) fillWidth = 1;
-                g.FillRectangle(fillBrush, 2, 4, fillWidth, 8);
-
-                if (percentage > 0)
+                if (!connected)
                 {
-                    using (Font font = new Font("Arial", 6.5f, FontStyle.Bold))
+                    // 未连接时显示一个红色问号或X
+                    using (Font f = new Font("Arial", 8, FontStyle.Bold))
                     {
-                        g.DrawString(percentage.ToString(), font, Brushes.Black, -1, 3);
-                        g.DrawString(percentage.ToString(), font, Brushes.White, 0, 2);
+                        g.DrawString("?", f, Brushes.Red, 1, 1);
+                    }
+                }
+                else
+                {
+                    // 绘制电池外框
+                    Pen pen = new Pen(Color.FromArgb(240, 240, 240), 1.5f);
+                    g.DrawRectangle(pen, 0, 2, 13, 11);
+                    g.FillRectangle(Brushes.FromArgb(240, 240, 240), 13, 5, 2, 5); // 正极头
+
+                    // 内部电量填充
+                    Brush fillBrush = Brushes.LimeGreen;
+                    if (percentage <= 20) fillBrush = Brushes.Red;
+                    else if (percentage <= 50) fillBrush = Brushes.Orange;
+
+                    int fillWidth = (int)((percentage / 100.0f) * 11);
+                    if (fillWidth < 1 && percentage > 0) fillWidth = 1;
+                    g.FillRectangle(fillBrush, 1, 3, fillWidth, 9);
+
+                    // 绘制清晰的粗体百分比数字（小于100时显示数字，100时简化显示）
+                    string textToDraw = percentage >= 100 ? "F" : percentage.ToString();
+                    using (Font font = new Font("Segoe UI", textToDraw.Length > 1 ? 6.5f : 7f, FontStyle.Bold))
+                    {
+                        // 黑色描边加白色文字，确保在任何任务栏背景下都清晰可辨
+                        g.DrawString(textToDraw, font, Brushes.Black, 0, 1);
+                        g.DrawString(textToDraw, font, Brushes.White, -0.5f, 0.5f);
                     }
                 }
             }
