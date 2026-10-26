@@ -38,7 +38,7 @@ namespace TSG809Battery
         {
             trayIcon = new NotifyIcon()
             {
-                Icon = CreateBatteryIcon(100, false),
+                Icon = CreateTextIcon(100, false),
                 ContextMenuStrip = CreateContextMenu(),
                 Visible = true,
                 Text = "TSG809 鼠标电量监视器"
@@ -139,14 +139,14 @@ namespace TSG809Battery
                 }
 
                 int displayVal = currentBattery >= 0 ? currentBattery : 0;
-                trayIcon.Icon = CreateBatteryIcon(displayVal, currentBattery >= 0);
+                trayIcon.Icon = CreateTextIcon(displayVal, currentBattery >= 0);
                 trayIcon.Text = $"TSG809 电量: {(currentBattery >= 0 ? currentBattery + "%" : "未连接")}";
             }
             catch { }
         }
 
-        // 优化图标：采用高辨识度的电池外观，悬停和右键能看清精确百分比
-        private Icon CreateBatteryIcon(int percentage, bool connected)
+        // 模仿 HWiNFO 风格：直接在托盘图标上显示高亮数字
+        private Icon CreateTextIcon(int percentage, bool connected)
         {
             Bitmap bitmap = new Bitmap(16, 16);
             using (Graphics g = Graphics.FromImage(bitmap))
@@ -156,28 +156,32 @@ namespace TSG809Battery
 
                 if (!connected)
                 {
-                    using (Font f = new Font("Arial", 8, FontStyle.Bold))
+                    using (Font f = new Font("Segoe UI", 7.5f, FontStyle.Bold))
                     {
                         g.DrawString("X", f, Brushes.Red, 2, 1);
                     }
                 }
                 else
                 {
-                    // 绘制外框
-                    using (Pen pen = new Pen(Color.White, 1.5f))
+                    // 100时显示 "99+" 或 "FL" 防止挤压，小于100直接显示数字
+                    string text = percentage >= 100 ? "99" : percentage.ToString();
+                    
+                    // 根据电量决定文字颜色（低电量红色、中等橙色、健康绿色）
+                    Brush textBrush = Brushes.LimeGreen;
+                    if (percentage <= 20) textBrush = Brushes.Red;
+                    else if (percentage <= 50) textBrush = Brushes.Orange;
+
+                    using (Font font = new Font("Segoe UI", 7.5f, FontStyle.Bold))
                     {
-                        g.DrawRectangle(pen, 0, 3, 13, 10);
+                        // 绘制黑色描边/阴影，使数字在任务栏上绝对清晰
+                        g.DrawString(text, font, Brushes.Black, 0, 2);
+                        g.DrawString(text, font, Brushes.Black, 2, 2);
+                        g.DrawString(text, font, Brushes.Black, 1, 3);
+                        g.DrawString(text, font, Brushes.Black, 1, 1);
+                        
+                        // 绘制核心彩色数字
+                        g.DrawString(text, font, textBrush, 1, 2);
                     }
-                    g.FillRectangle(Brushes.White, 13, 6, 2, 4);
-
-                    // 填充颜色
-                    Brush fillBrush = Brushes.LimeGreen;
-                    if (percentage <= 20) fillBrush = Brushes.Red;
-                    else if (percentage <= 50) fillBrush = Brushes.Orange;
-
-                    int fillWidth = (int)((percentage / 100.0f) * 11);
-                    if (fillWidth < 1 && percentage > 0) fillWidth = 1;
-                    g.FillRectangle(fillBrush, 1, 4, fillWidth, 8);
                 }
             }
             return Icon.FromHandle(bitmap.GetHicon());
