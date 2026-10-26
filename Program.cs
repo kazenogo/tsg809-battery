@@ -144,7 +144,7 @@ namespace TSG809Battery
             }
             catch { }
         }
-// 极致契合浅色任务栏：模仿 HWiNFO 的纯黑锐利数字风格
+// 极致放大：常规体（无粗体）、更大的字号，充满 16x16 空间
         private Icon CreateTextIcon(int percentage, bool connected)
         {
             Bitmap bitmap = new Bitmap(16, 16);
@@ -152,7 +152,7 @@ namespace TSG809Battery
             {
                 g.Clear(Color.Transparent);
                 
-                // 开启像素级精准对齐，关闭抗锯齿，使字体边缘绝对硬朗
+                // 开启像素级对齐，保证大字号在小图标里边缘依然清晰
                 g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
@@ -168,11 +168,11 @@ namespace TSG809Battery
                 {
                     string text = percentage >= 100 ? "99" : percentage.ToString();
                     
-                    // 核心：直接使用纯黑色粗体，完美契合你的浅色任务栏，清晰度向 HWiNFO 看齐
-                    using (Font font = new Font("Arial", 8f, FontStyle.Bold))
+                    // 字号调大到 10f，且使用常规体（FontStyle.Regular）去掉粗体
+                    using (Font font = new Font("Arial", 10f, FontStyle.Regular))
                     {
-                        // 稍微往下/往右微调 1 像素，让数字在 16x16 区域内完美居中显示
-                        g.DrawString(text, font, Brushes.Black, 1, 1);
+                        // 稍微微调坐标，让更大的数字在 16x16 区域内居中显示
+                        g.DrawString(text, font, Brushes.Black, 0, 0);
                     }
                 }
             }
