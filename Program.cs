@@ -29,7 +29,7 @@ namespace TSG809Battery
         private bool running = true;
         
         private int currentBattery = -1;
-        private string connectionStatus = "正在连接 TSG809 鼠标...";
+        private string connectionStatus = "正在连接 TSG809...";
 
         private const int TargetVendorID = 0xA8A5;
         private const int TargetProductID = 0x2255;
@@ -103,7 +103,7 @@ namespace TSG809Battery
                             }
                             catch 
                             { 
-                                if (currentBattery == -1) currentBattery = 88; // 默认演示
+                                if (currentBattery == -1) currentBattery = 88; // 默认演示电量
                             }
                             
                             hidStream.Close();
@@ -145,6 +145,7 @@ namespace TSG809Battery
             catch { }
         }
 
+        // 优化图标：采用高辨识度的电池外观，悬停和右键能看清精确百分比
         private Icon CreateBatteryIcon(int percentage, bool connected)
         {
             Bitmap bitmap = new Bitmap(16, 16);
@@ -157,35 +158,26 @@ namespace TSG809Battery
                 {
                     using (Font f = new Font("Arial", 8, FontStyle.Bold))
                     {
-                        g.DrawString("?", f, Brushes.Red, 1, 1);
+                        g.DrawString("X", f, Brushes.Red, 2, 1);
                     }
                 }
                 else
                 {
-                    // 修正：使用 Color.FromArgb
-                    using (Pen pen = new Pen(Color.FromArgb(240, 240, 240), 1.5f))
+                    // 绘制外框
+                    using (Pen pen = new Pen(Color.White, 1.5f))
                     {
-                        g.DrawRectangle(pen, 0, 2, 13, 11);
+                        g.DrawRectangle(pen, 0, 3, 13, 10);
                     }
-                    using (SolidBrush brushHeader = new SolidBrush(Color.FromArgb(240, 240, 240)))
-                    {
-                        g.FillRectangle(brushHeader, 13, 5, 2, 5);
-                    }
+                    g.FillRectangle(Brushes.White, 13, 6, 2, 4);
 
+                    // 填充颜色
                     Brush fillBrush = Brushes.LimeGreen;
                     if (percentage <= 20) fillBrush = Brushes.Red;
                     else if (percentage <= 50) fillBrush = Brushes.Orange;
 
                     int fillWidth = (int)((percentage / 100.0f) * 11);
                     if (fillWidth < 1 && percentage > 0) fillWidth = 1;
-                    g.FillRectangle(fillBrush, 1, 3, fillWidth, 9);
-
-                    string textToDraw = percentage >= 100 ? "F" : percentage.ToString();
-                    using (Font font = new Font("Segoe UI", textToDraw.Length > 1 ? 6.5f : 7f, FontStyle.Bold))
-                    {
-                        g.DrawString(textToDraw, font, Brushes.Black, 0, 1);
-                        g.DrawString(textToDraw, font, Brushes.White, -0.5f, 0.5f);
-                    }
+                    g.FillRectangle(fillBrush, 1, 4, fillWidth, 8);
                 }
             }
             return Icon.FromHandle(bitmap.GetHicon());
