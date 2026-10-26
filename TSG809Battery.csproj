@@ -2,11 +2,15 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- 切换为 Windows 自带的 .NET Framework 4.8，实现极致瘦身 -->
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework> <!-- 可按需改为 net9.0-windows 或 net10.0-windows -->
     <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    
+    <!-- 核心瘦身：关闭自包含打包，不内嵌庞大运行库 -->
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
