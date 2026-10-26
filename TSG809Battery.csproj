@@ -8,15 +8,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     
-    <!-- 极致瘦身优化配置 -->
+    <!-- 基础单文件发布配置（无裁剪，确保 100% 编译通过） -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <PublishTrimmed>true</PublishTrimmed> <!-- 裁剪未使用的代码和库 -->
-    <TrimMode>link</TrimMode>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile> <!-- 压缩单文件 -->
-    <InvariantGlobalization>true</InvariantGlobalization> <!-- 移除多语言全球化庞大数据库 -->
-    <StripSymbols>true</StripSymbols>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HidSharp" Version="2.1.0" />
+  </ItemGroup>
 
 </Project>
