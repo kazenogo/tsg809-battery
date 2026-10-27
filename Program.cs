@@ -38,7 +38,7 @@ namespace TSG809Battery
         {
             trayIcon = new NotifyIcon()
             {
-                Icon = CreateTextIcon(100, false),
+                Icon = CreateTextIcon(88, false),
                 ContextMenuStrip = CreateContextMenu(),
                 Visible = true,
                 Text = "TSG809 鼠标电量监视器"
@@ -84,16 +84,25 @@ namespace TSG809Battery
                             foundDevice = true;
                             connectionStatus = "TSG809 已连接";
                             
-                            hidStream.ReadTimeout = 500;
+                            hidStream.ReadTimeout = 1000;
                             byte[] buf = new byte[device.GetMaxInputReportLength()];
                             try
                             {
                                 int readBytes = hidStream.Read(buf);
                                 if (readBytes > 0)
                                 {
+                                    // 诊断模式：把收到的前 6 个字节组合成字符串，方便悬停查看
+                                    string rawHex = "";
+                                    for (int i = 0; i < Math.Min(6, buf.Length); i++)
+                                    {
+                                        rawHex += $"{buf[i]} ";
+                                    }
+                                    connectionStatus = $"原始数据: [{rawHex}]";
+                                    
+                                    // 尝试在数据包中匹配合法的电量数值 (0-100 之间)
                                     for (int i = 0; i < buf.Length; i++)
                                     {
-                                        if (buf[i] >= 0 && buf[i] <= 100 && (i == 2 || i == 3 || i == 4))
+                                        if (buf[i] >= 0 && buf[i] <= 100 && (i == 1 || i == 2 || i == 3 || i == 4))
                                         {
                                             currentBattery = buf[i];
                                             break;
@@ -103,7 +112,7 @@ namespace TSG809Battery
                             }
                             catch 
                             { 
-                                if (currentBattery == -1) currentBattery = 88; // 默认演示电量
+                                connectionStatus = "读取超时 (鼠标可能休眠)";
                             }
                             
                             hidStream.Close();
@@ -134,17 +143,19 @@ namespace TSG809Battery
                 if (trayIcon.ContextMenuStrip != null && trayIcon.ContextMenuStrip.Items.Count > 0)
                 {
                     trayIcon.ContextMenuStrip.Invoke((MethodInvoker)(() => {
-                        trayIcon.ContextMenuStrip.Items[0].Text = $"{connectionStatus} | 电量: {(currentBattery >= 0 ? currentBattery + "%" : "未连接")}";
+                        trayIcon.ContextMenuStrip.Items[0].Text = $"{connectionStatus}";
                     }));
                 }
 
                 int displayVal = currentBattery >= 0 ? currentBattery : 0;
                 trayIcon.Icon = CreateTextIcon(displayVal, currentBattery >= 0);
-                trayIcon.Text = $"TSG809 电量: {(currentBattery >= 0 ? currentBattery + "%" : "未连接")}";
+                // 悬停提示中会显示当前的电量及底层原始数据，方便核对
+                trayIcon.Text = $"TSG809 电量: {(currentBattery >= 0 ? currentBattery + "%" : "未连接")} | {connectionStatus}";
             }
             catch { }
         }
-// 极致放大：常规体（无粗体）、更大的字号，充满 16x16 空间
+
+        // 极致清晰：10号字、常规体、纯黑数字，完美契合浅色任务栏
         private Icon CreateTextIcon(int percentage, bool connected)
         {
             Bitmap bitmap = new Bitmap(16, 16);
@@ -152,7 +163,6 @@ namespace TSG809Battery
             {
                 g.Clear(Color.Transparent);
                 
-                // 开启像素级对齐，保证大字号在小图标里边缘依然清晰
                 g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
@@ -168,10 +178,8 @@ namespace TSG809Battery
                 {
                     string text = percentage >= 100 ? "99" : percentage.ToString();
                     
-                    // 字号调大到 10f，且使用常规体（FontStyle.Regular）去掉粗体
                     using (Font font = new Font("Arial", 10f, FontStyle.Regular))
                     {
-                        // 稍微微调坐标，让更大的数字在 16x16 区域内居中显示
                         g.DrawString(text, font, Brushes.Black, 0, 0);
                     }
                 }
