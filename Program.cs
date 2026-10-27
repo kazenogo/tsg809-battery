@@ -84,25 +84,35 @@ namespace TSG809Battery
                             foundDevice = true;
                             connectionStatus = "TSG809 已连接";
                             
-                            hidStream.ReadTimeout = 1000;
-                            byte[] buf = new byte[device.GetMaxInputReportLength()];
                             try
                             {
+                                // 1. 主动向鼠标发送一个获取电力的请求包（命令字 0x07）
+                                int maxOutLen = device.GetMaxOutputReportLength();
+                                if (maxOutLen > 0)
+                                {
+                                    byte[] writeBuf = new byte[maxOutLen];
+                                    writeBuf[0] = 0x07; 
+                                    hidStream.Write(writeBuf);
+                                }
+
+                                // 2. 读取返回的数据
+                                hidStream.ReadTimeout = 1500;
+                                byte[] buf = new byte[device.GetMaxInputReportLength()];
                                 int readBytes = hidStream.Read(buf);
+                                
                                 if (readBytes > 0)
                                 {
-                                    // 诊断模式：把收到的前 6 个字节组合成字符串，方便悬停查看
                                     string rawHex = "";
-                                    for (int i = 0; i < Math.Min(6, buf.Length); i++)
+                                    for (int i = 0; i < Math.Min(8, buf.Length); i++)
                                     {
                                         rawHex += $"{buf[i]} ";
                                     }
-                                    connectionStatus = $"原始数据: [{rawHex}]";
+                                    connectionStatus = $"收到数据: [{rawHex}]";
                                     
-                                    // 尝试在数据包中匹配合法的电量数值 (0-100 之间)
+                                    // 遍历寻找 0 到 100 之间的合理电量值
                                     for (int i = 0; i < buf.Length; i++)
                                     {
-                                        if (buf[i] >= 0 && buf[i] <= 100 && (i == 1 || i == 2 || i == 3 || i == 4))
+                                        if (buf[i] > 0 && buf[i] <= 100)
                                         {
                                             currentBattery = buf[i];
                                             break;
@@ -110,9 +120,9 @@ namespace TSG809Battery
                                     }
                                 }
                             }
-                            catch 
-                            { 
-                                connectionStatus = "读取超时 (鼠标可能休眠)";
+                            catch (Exception ex)
+                            {
+                                connectionStatus = "通信中: " + ex.Message;
                             }
                             
                             hidStream.Close();
@@ -149,7 +159,6 @@ namespace TSG809Battery
 
                 int displayVal = currentBattery >= 0 ? currentBattery : 0;
                 trayIcon.Icon = CreateTextIcon(displayVal, currentBattery >= 0);
-                // 悬停提示中会显示当前的电量及底层原始数据，方便核对
                 trayIcon.Text = $"TSG809 电量: {(currentBattery >= 0 ? currentBattery + "%" : "未连接")} | {connectionStatus}";
             }
             catch { }
